@@ -99,6 +99,13 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
     await update.message.reply_photo(photo=open(photo_path, "rb"))
 
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "Вот что я умею:\n"
+        "/start — приветствие и краткая инструкция\n"
+        "/phrase — присылаю мотивационную фразу 🌸\n"
+        "/photo — присылаю милую фотку 🐶"
+
 # -----------------------------
 # 5️⃣ Настройка приложения
 # -----------------------------
@@ -114,6 +121,7 @@ app.add_handler(CommandHandler("photo", photo))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
 
 
 
