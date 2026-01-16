@@ -1,7 +1,7 @@
 import os
 import random
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 # -----------------------------
 # 1️⃣ Токен
@@ -9,17 +9,17 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
     raise ValueError("Токен не найден! Проверь Environment Variables на Railway")
-TOKEN = TOKEN.strip()  # убираем лишние пробелы и переносы
+TOKEN = TOKEN.strip()
 
 # -----------------------------
 # 2️⃣ Папка с фотографиями
 # -----------------------------
-PHOTOS_DIR = "photos"  # папка в корне репозитория с фото 1.jpg, 2.jpg ... 50.jpg
+PHOTOS_DIR = "photos"
 photo_files = os.listdir(PHOTOS_DIR)
 photo_files = [f for f in photo_files if f.endswith(".jpg")]
 if not photo_files:
     raise ValueError("В папке photos нет jpg файлов!")
-photo_files.sort()  # упорядочиваем файлы
+photo_files.sort()
 
 # -----------------------------
 # 3️⃣ Список фраз
@@ -79,48 +79,56 @@ PHRASES = [
 ]
 
 # -----------------------------
-# 4️⃣ Команды / кнопки
+# 4️⃣ Клавиатура с кнопками
+# -----------------------------
+keyboard = [
+    ["Мотивирующая фраза 🌸", "Милая фотка 🐶"],
+    ["Помощь ℹ️"]
+]
+reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+# -----------------------------
+# 5️⃣ Обработчики сообщений
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("Мотивирующая фраза 🌸", callback_data="phrase")],
-        [InlineKeyboardButton("Милая фотка 🐶", callback_data="photo")],
-        [InlineKeyboardButton("Помощь ℹ️", callback_data="help")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "Привет! Я твой маленький дружок с милыми фразами и фото 🐶🌸\n"
-        "Выбирай, что хочешь получить:", reply_markup=reply_markup
+        "Нажимай на кнопки внизу, чтобы получать мотивацию и фотки.",
+        reply_markup=reply_markup
     )
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
 
-    if query.data == "phrase":
-        text = random.choice(PHRASES)
-        await query.edit_message_text(text)
-    elif query.data == "photo":
+    if text == "Мотивирующая фраза 🌸":
+        phrase = random.choice(PHRASES)
+        await update.message.reply_text(phrase, reply_markup=reply_markup)
+    elif text == "Милая фотка 🐶":
         photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
-        await query.edit_message_media(InputMediaPhoto(open(photo_path, "rb")))
-    elif query.data == "help":
+        await update.message.reply_photo(photo=open(photo_path, "rb"), reply_markup=reply_markup)
+    elif text == "Помощь ℹ️":
         help_text = (
             "Вот что я умею:\n"
             "🌸 Мотивирующая фраза — присылаю случайную мотивацию\n"
             "🐶 Милая фотка — присылаю фото собак\n"
             "ℹ️ Помощь — эта подсказка"
         )
-        await query.edit_message_text(help_text)
+        await update.message.reply_text(help_text, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(
+            "Нажимай на кнопки внизу, чтобы получить мотивацию или фото 🐶🌸",
+            reply_markup=reply_markup
+        )
 
 # -----------------------------
-# 5️⃣ Настройка приложения
+# 6️⃣ Настройка приложения
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(button_handler))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # -----------------------------
-# 6️⃣ Запуск
+# 7️⃣ Запуск
 # -----------------------------
 if __name__ == "__main__":
     print("Бот запущен!")
