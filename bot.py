@@ -1,32 +1,31 @@
 import os
 import random
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CallbackQueryHandler,
+    ContextTypes,
+)
 
 # -----------------------------
 # 1️⃣ Токен
 # -----------------------------
-# На Railway: добавь Environment Variable
-# KEY: TOKEN
-# VALUE: <твой токен от BotFather, без кавычек, без пробелов>
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
     raise ValueError("Токен не найден! Проверь Environment Variables на Railway")
-
-TOKEN = TOKEN.strip()  # убираем пробелы и переносы
+TOKEN = TOKEN.strip()
 
 # -----------------------------
 # 2️⃣ Папка с фотографиями
 # -----------------------------
-PHOTOS_DIR = "photos"  # папка в корне репозитория с фото 1.jpg, 2.jpg ... 50.jpg
-photo_files = os.listdir(PHOTOS_DIR)
-photo_files = [f for f in photo_files if f.endswith(".jpg")]
+PHOTOS_DIR = "photos"
+photo_files = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
+photo_files.sort()
 if not photo_files:
     raise ValueError("В папке photos нет jpg файлов!")
-photo_files.sort()  # упорядочиваем файлы
 
 # -----------------------------
-# 3️⃣ Список фраз
+# 3️⃣ Фразы
 # -----------------------------
 PHRASES = [
     "Леночка, ты невероятная, не забывай об этом 🌸",
@@ -47,7 +46,7 @@ PHRASES = [
     "Ты умеешь справляться с трудностями, даже если сейчас тяжело 🌷",
     "Позволь себе отдохнуть и улыбнуться 😊",
     "Леночка, ты заслуживаешь любви и заботы 🌹",
-    "Каждое твое чувство важно, не подавляй его 💛",
+    "Каждое твоё чувство важно, не подавляй его 💛",
     "Ты не одна, мир и я с тобой 🌈",
     "Леночка, сегодня хороший день для маленькой радости 🍀",
     "Ты талантлива, умна и прекрасна 🌟",
@@ -82,40 +81,73 @@ PHRASES = [
     "Каждое утро — шанс начать с чистого листа 🌈"
 ]
 
-
 # -----------------------------
-# 4️⃣ Команды бота
+# 4️⃣ Функции бота
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("📜 Фраза", callback_data="phrase")],
+        [InlineKeyboardButton("🐶 Фото", callback_data="photo")],
+        [InlineKeyboardButton("❓ Помощь", callback_data="help")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Привет! Я твой маленький дружок с милыми фразами и фото собак 🐶\n"
-        "Используй команду /help, чтобы узнать, что я умею."
+        f"Привет, {update.effective_user.first_name}! Я твой дружок с милыми фразами и фото 🐾",
+        reply_markup=reply_markup
     )
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """Вот что я умею:
-/start — приветствие и краткая инструкция
-/phrase — присылаю мотивационную фразу 🌸
-/photo — присылаю милую фотку 🐶"""
-    await update.message.reply_text(help_text)
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_name = update.effective_user.first_name or "друг"
 
-async def phrase(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = random.choice(PHRASES)
-    await update.message.reply_text(text)
+    if query.data == "phrase":
+        text = random.choice(PHRASES).format(name=user_name)
+        await query.edit_message_text(text)
+        # снова показываем кнопки
+        keyboard = [
+            [InlineKeyboardButton("📜 Фраза", callback_data="phrase")],
+            [InlineKeyboardButton("🐶 Фото", callback_data="photo")],
+            [InlineKeyboardButton("❓ Помощь", callback_data="help")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.reply_text("Выбирай дальше:", reply_markup=reply_markup)
 
-async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
-    await update.message.reply_photo(photo=open(photo_path, "rb"))
+    elif query.data == "photo":
+        photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
+        await query.message.reply_photo(photo=open(photo_path, "rb"))
+        # снова показываем кнопки
+        keyboard = [
+            [InlineKeyboardButton("📜 Фраза", callback_data="phrase")],
+            [InlineKeyboardButton("🐶 Фото", callback_data="photo")],
+            [InlineKeyboardButton("❓ Помощь", callback_data="help")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.reply_text("Выбирай дальше:", reply_markup=reply_markup)
+
+    elif query.data == "help":
+        help_text = (
+            "Меню бота:\n"
+            "📜 Фраза — присылаю милую фразу 🌸\n"
+            "🐶 Фото — присылаю милую фотку 🐶\n"
+            "❓ Помощь — показать это сообщение"
+        )
+        await query.edit_message_text(help_text)
+        # снова показываем кнопки
+        keyboard = [
+            [InlineKeyboardButton("📜 Фраза", callback_data="phrase")],
+            [InlineKeyboardButton("🐶 Фото", callback_data="photo")],
+            [InlineKeyboardButton("❓ Помощь", callback_data="help")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.reply_text("Выбирай дальше:", reply_markup=reply_markup)
 
 # -----------------------------
 # 5️⃣ Настройка приложения
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
-
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("phrase", phrase))
-app.add_handler(CommandHandler("photo", photo))
+app.add_handler(CallbackQueryHandler(button_handler))
+app.add_handler(CallbackQueryHandler(button_handler, pattern=".*"))  # для всех кнопок
 
 # -----------------------------
 # 6️⃣ Запуск
@@ -123,9 +155,3 @@ app.add_handler(CommandHandler("photo", photo))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
-
-
-
-
-
-
