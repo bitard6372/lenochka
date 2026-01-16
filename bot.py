@@ -5,7 +5,13 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 # ====== НАСТРОЙКИ ======
 import os
-TOKEN = os.getenv("8217164196:AAHKv8NStBZbJR1QAGIJFO3Nn8fcX3UNNXQ")
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler
+import random
+
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise ValueError("Токен не найден! Проверь Environment Variables на Railway")
 PHOTOS_DIR = "photos"
 
 # ====== ПУЛ ФРАЗ (50) ======
@@ -107,4 +113,5 @@ app.add_handler(CommandHandler("dog", dog))
 app.add_handler(CommandHandler("random", random_all))
 
 app.run_polling()
+
 
