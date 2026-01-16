@@ -88,8 +88,16 @@ PHRASES = [
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! Я твой маленький дружок с милыми фразами и фото собак 🐶"
+        "Привет! Я твой маленький дружок с милыми фразами и фото собак 🐶\n"
+        "Используй команду /help, чтобы узнать, что я умею."
     )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = """Вот что я умею:
+/start — приветствие и краткая инструкция
+/phrase — присылаю мотивационную фразу 🌸
+/photo — присылаю милую фотку 🐶"""
+    await update.message.reply_text(help_text)
 
 async def phrase(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = random.choice(PHRASES)
@@ -99,19 +107,13 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
     await update.message.reply_photo(photo=open(photo_path, "rb"))
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = (
-        "Вот что я умею:\n"
-        "/start — приветствие и краткая инструкция\n"
-        "/phrase — присылаю мотивационную фразу 🌸\n"
-        "/photo — присылаю милую фотку 🐶"
-
 # -----------------------------
 # 5️⃣ Настройка приложения
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("help", help_command))
 app.add_handler(CommandHandler("phrase", phrase))
 app.add_handler(CommandHandler("photo", photo))
 
@@ -121,6 +123,7 @@ app.add_handler(CommandHandler("photo", photo))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
 
 
 
