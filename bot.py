@@ -150,30 +150,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "Мотивирующая фраза 🌸":
         phrase = random.choice(PHRASES)
         await update.message.reply_text(phrase, reply_markup=reply_markup)
+
     elif text == "Милая фотка 🐶":
         photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
         await update.message.reply_photo(photo=open(photo_path, "rb"), reply_markup=reply_markup)
-    elif text == "Поздравление 🎉":
-    now = datetime.now(timezone.utc) + timedelta(hours=10)  # UTC+10
-    birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
-    birthday_end = birthday_start + timedelta(days=1)
 
-    if now < birthday_start:
-        await update.message.reply_text(
-            "Ещё рано 🎈 Подожди немного до особенного дня!",
-            reply_markup=reply_markup
-        )
-    elif birthday_start <= now < birthday_end:
-        await update.message.reply_text(
-            "Дорогая Леночка, наступил особенный день, который только для тебя. "
-            "Спасибо, что ты есть 🎉❤️",
-            reply_markup=reply_markup
-        )
-    else:
-        await update.message.reply_text(
-            "Поздравление уже прошло, но ты всё равно чудо 🌸",
-            reply_markup=reply_markup
-        )
+    elif text == "Поздравление 🎉":
+        birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
+        birthday_end = birthday_start + timedelta(days=1)
+
+        if now < birthday_start:
+            await update.message.reply_text(
+                "Ещё рано 🎈 Подожди немного до особенного дня!",
+                reply_markup=reply_markup
+            )
+        elif birthday_start <= now < birthday_end:
+            await update.message.reply_text(
+                "Дорогая Леночка, наступил особенный день, который только для тебя. "
+                "Спасибо, что ты есть 🎉❤️",
+                reply_markup=reply_markup
+            )
+        else:
+            await update.message.reply_text(
+                "Поздравление уже прошло, но ты всё равно чудо 🌸",
+                reply_markup=reply_markup
+            )
+
     elif text == "Помощь ℹ️":
         help_text = (
             "Вот что я умею:\n"
@@ -183,6 +185,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ℹ️ Помощь — эта подсказка"
         )
         await update.message.reply_text(help_text, reply_markup=reply_markup)
+
     else:
         await update.message.reply_text(
             "Нажимай на кнопки внизу, чтобы получить мотивацию, фото или поздравление 🎉",
@@ -202,4 +205,5 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
 
