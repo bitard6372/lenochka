@@ -135,16 +135,9 @@ reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # -----------------------------
 # 5️⃣ Обработчики сообщений
 # -----------------------------
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Привет! Я твой маленький дружок с милыми фразами и фото 🐶🌸\n"
-        "Нажимай на кнопки внизу, чтобы получать мотивацию, фотки и поздравление 🎉.",
-        reply_markup=reply_markup
-    )
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    now = datetime.now(timezone.utc) + timedelta(hours=TIMEZONE_OFFSET)
+    now = datetime.now(timezone.utc) + timedelta(hours=10)  # UTC+10
 
     if text == "Мотивирующая фраза 🌸":
         phrase = random.choice(PHRASES)
@@ -153,12 +146,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
         await update.message.reply_photo(photo=open(photo_path, "rb"), reply_markup=reply_markup)
     elif text == "Поздравление 🎉":
-        if now < BIRTHDAY_DATE:
+        if now < datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc):
             await update.message.reply_text(
                 "Ещё рано 🎈 Подожди немного до особенного дня!",
                 reply_markup=reply_markup
             )
-        elif BIRTHDAY_DATE <= now < BIRTHDAY_DATE + timedelta(days=1):
+        elif datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc) <= now < datetime(2026, 1, 25, 0, 0, 0, tzinfo=timezone.utc):
             await update.message.reply_text(
                 "Дорогая Леночка, наступил особенный день, который только для тебя. Спасибо, что ты есть 🎉❤️",
                 reply_markup=reply_markup
@@ -196,6 +189,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
 
 
 
