@@ -1,6 +1,6 @@
-from datetime import datetime, timezone, timedelta
 import os
 import random
+from datetime import datetime, timezone, timedelta
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
@@ -21,7 +21,6 @@ photo_files = [f for f in photo_files if f.endswith(".jpg")]
 if not photo_files:
     raise ValueError("В папке photos нет jpg файлов!")
 photo_files.sort()
-
 # -----------------------------
 # 3️⃣ Список фраз
 # -----------------------------
@@ -123,7 +122,6 @@ PHRASES = [
     "Ты моя радость каждый день 😺🌼",
     "С тобой хочется улыбаться 😊🌟"
 ]
-
 # -----------------------------
 # 4️⃣ Клавиатура с кнопками
 # -----------------------------
@@ -134,13 +132,20 @@ keyboard = [
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # -----------------------------
-# Глобальная переменная для последнего фото
+# 5️⃣ Глобальная переменная для последнего фото
 # -----------------------------
 last_photo = None
 
 # -----------------------------
-# Обработчик сообщений
+# 6️⃣ Обработчики сообщений
 # -----------------------------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Привет! Я твой маленький дружок с милыми фразами и фото 🐶🌸\n"
+        "Нажимай на кнопки внизу, чтобы получать мотивацию, фотки и поздравление 🎉.",
+        reply_markup=reply_markup
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global last_photo
     text = update.message.text
@@ -156,7 +161,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         while photo_path == last_photo and len(photo_files) > 1:
             photo_path = random.choice(photo_files)
         last_photo = photo_path
-        await update.message.reply_photo(photo=open(photo_path, "rb"), reply_markup=reply_markup)
+        await update.message.reply_photo(photo=open(os.path.join(PHOTOS_DIR, photo_path), "rb"),
+                                         reply_markup=reply_markup)
 
     elif text == "Поздравление 🎉":
         birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
@@ -199,8 +205,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 7️⃣ Настройка приложения
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))  # <-- тут start уже должен быть объявлен
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
 # -----------------------------
 # 8️⃣ Запуск
@@ -208,7 +214,3 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
-
-
-
-
