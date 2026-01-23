@@ -135,6 +135,13 @@ reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # -----------------------------
 # 5️⃣ Обработчики сообщений
 # -----------------------------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Привет! Я твой маленький дружок с милыми фразами и фото 🐶🌸\n"
+        "Нажимай на кнопки внизу, чтобы получать мотивацию, фотки и поздравление 🎉.",
+        reply_markup=reply_markup
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     now = datetime.now(timezone.utc) + timedelta(hours=10)  # UTC+10
@@ -180,7 +187,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 7️⃣ Настройка приложения
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("start", start))  # <-- тут start уже должен быть объявлен
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # -----------------------------
@@ -189,7 +196,3 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
-
-
-
-
