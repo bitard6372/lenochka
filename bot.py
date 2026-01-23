@@ -134,6 +134,11 @@ keyboard = [
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # -----------------------------
+# Глобальная переменная для последнего фото
+# -----------------------------
+last_photo = None
+
+# -----------------------------
 # 5️⃣ Обработчики сообщений
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -151,9 +156,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         phrase = random.choice(PHRASES)
         await update.message.reply_text(phrase, reply_markup=reply_markup)
 
-    elif text == "Милая фотка 🐶":
-        photo_path = os.path.join(PHOTOS_DIR, random.choice(photo_files))
-        await update.message.reply_photo(photo=open(photo_path, "rb"), reply_markup=reply_markup)
+elif text == "Милая фотка 🐶":
+    global last_photo
+    photo_path = random.choice(photo_files)
+    
+    # Проверяем, чтобы фото не повторялось подряд
+    while photo_path == last_photo and len(photo_files) > 1:
+        photo_path = random.choice(photo_files)
+    
+    last_photo = photo_path
+    await update.message.reply_photo(photo=open(photo_path, "rb"), reply_markup=reply_markup)
 
     elif text == "Поздравление 🎉":
         birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
@@ -205,5 +217,6 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
 
 
