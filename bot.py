@@ -23,11 +23,21 @@ TOKEN = TOKEN.strip()
 # 2️⃣ Фото
 # -----------------------------
 PHOTOS_DIR = "photos"
-photo_files = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
-photo_files.sort()
 
-if not photo_files:
+all_photos = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
+if not all_photos:
     raise ValueError("В папке photos нет jpg файлов")
+
+photo_queue = []
+
+def get_next_photo():
+    global photo_queue
+
+    if not photo_queue:
+        photo_queue = all_photos.copy()
+        random.shuffle(photo_queue)
+
+    return photo_queue.pop()
 
 # -----------------------------
 # 3️⃣ Список фраз
@@ -225,14 +235,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-    elif text == "Милая фотка 🐶":
-        log_action(user, "photo")
-        await notify_admin(context, user, "photo")
-        photo = random.choice(photo_files)
-        await update.message.reply_photo(
-            photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
-            reply_markup=reply_markup
-        )
+elif text == "Милая фотка 🐶":
+    log_action(user, "photo")
+
+    photo = get_next_photo()
+    await update.message.reply_photo(
+        photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
+        reply_markup=reply_markup
+    )
+
 
     elif text == "Поздравление 🎉":
         log_action(user, "birthday")
@@ -279,6 +290,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен")
     app.run_polling()
+
 
 
 
