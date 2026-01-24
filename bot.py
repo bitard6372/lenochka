@@ -1,5 +1,8 @@
 import os
 import random
+import sqlite3
+from datetime import datetime
+
 from datetime import datetime, timezone, timedelta
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
@@ -136,6 +139,54 @@ reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 # -----------------------------
 last_photo = None
 
+def log_action(user, action):
+    conn = sqlite3.connect("stats.db")
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            first_name TEXT,
+            first_seen TEXT,
+            last_seen TEXT
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT,
+            timestamp TEXT
+        )
+    """)
+
+    now = datetime.now().isoformat()
+
+    cur.execute("""
+        INSERT INTO users (user_id, username, first_name, first_seen, last_seen)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            last_seen=excluded.last_seen,
+            username=excluded.username,
+            first_name=excluded.first_name
+    """, (
+        user.id,
+        user.username,
+        user.first_name,
+        now,
+        now
+    ))
+
+    cur.execute("""
+        INSERT INTO actions (user_id, action, timestamp)
+        VALUES (?, ?, ?)
+    """, (user.id, action, now))
+
+    conn.commit()
+    conn.close()
+
 # -----------------------------
 # 6️⃣ Обработчики сообщений
 # -----------------------------
@@ -214,3 +265,4 @@ app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
