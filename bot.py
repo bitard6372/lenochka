@@ -1,29 +1,35 @@
 import os
 import random
 import sqlite3
-from datetime import datetime
-
 from datetime import datetime, timezone, timedelta
+
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters
+)
 
 # -----------------------------
 # 1️⃣ Токен
 # -----------------------------
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise ValueError("Токен не найден! Проверь Environment Variables на Railway")
+    raise ValueError("TOKEN не найден в Environment Variables")
 TOKEN = TOKEN.strip()
 
 # -----------------------------
-# 2️⃣ Папка с фотографиями
+# 2️⃣ Фото
 # -----------------------------
 PHOTOS_DIR = "photos"
-photo_files = os.listdir(PHOTOS_DIR)
-photo_files = [f for f in photo_files if f.endswith(".jpg")]
-if not photo_files:
-    raise ValueError("В папке photos нет jpg файлов!")
+photo_files = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
 photo_files.sort()
+
+if not photo_files:
+    raise ValueError("В папке photos нет jpg файлов")
+
 # -----------------------------
 # 3️⃣ Список фраз
 # -----------------------------
@@ -126,7 +132,7 @@ PHRASES = [
     "С тобой хочется улыбаться 😊🌟"
 ]
 # -----------------------------
-# 4️⃣ Клавиатура с кнопками
+# 4️⃣ Клавиатура
 # -----------------------------
 keyboard = [
     ["Мотивирующая фраза 🌸", "Милая фотка 🐶"],
@@ -135,10 +141,8 @@ keyboard = [
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # -----------------------------
-# 5️⃣ Глобальная переменная для последнего фото
+# 5️⃣ База статистики
 # -----------------------------
-last_photo = None
-
 def log_action(user, action):
     conn = sqlite3.connect("stats.db")
     cur = conn.cursor()
@@ -188,87 +192,75 @@ def log_action(user, action):
     conn.close()
 
 # -----------------------------
-# 6️⃣ Обработчики сообщений
+# 6️⃣ Обработчики
 # -----------------------------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    log_action(update.effective_user, "start")
+    await update.message.reply_text(
+        "Привет 💛\nНажимай на кнопки внизу ⬇️",
+        reply_markup=reply_markup
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global last_photo
     text = update.message.text
-    now = datetime.now(timezone.utc) + timedelta(hours=10)  # UTC+10
+    user = update.effective_user
+    now = datetime.now(timezone.utc)
 
     if text == "Мотивирующая фраза 🌸":
-        log_action(update.effective_user, "phrase")
-
-        phrase = random.choice(PHRASES)
-        await update.message.reply_text(phrase, reply_markup=reply_markup)
+        log_action(user, "phrase")
+        await update.message.reply_text(
+            random.choice(PHRASES),
+            reply_markup=reply_markup
+        )
 
     elif text == "Милая фотка 🐶":
-        log_action(update.effective_user, "photo")
-
-        photo_path = random.choice(photo_files)
-        while photo_path == last_photo and len(photo_files) > 1:
-            photo_path = random.choice(photo_files)
-        last_photo = photo_path
-
+        log_action(user, "photo")
+        photo = random.choice(photo_files)
         await update.message.reply_photo(
-            photo=open(os.path.join(PHOTOS_DIR, photo_path), "rb"),
+            photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
             reply_markup=reply_markup
         )
 
     elif text == "Поздравление 🎉":
-        log_action(update.effective_user, "congratulation")
-
-        birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
+        log_action(user, "birthday")
+        birthday_start = datetime(2026, 1, 24, 0, 0, tzinfo=timezone.utc)
         birthday_end = birthday_start + timedelta(days=1)
 
         if now < birthday_start:
-            await update.message.reply_text(
-                "Ещё рано 🎈 Подожди немного до особенного дня!",
-                reply_markup=reply_markup
-            )
+            msg = "Еще рано 🎈 Подожди немного"
         elif birthday_start <= now < birthday_end:
-            await update.message.reply_text(
+            msg = (
                 "Дорогая Леночка, наступил особенный день, который только для тебя. "
-                "Спасибо, что ты есть 🎉❤️",
-                reply_markup=reply_markup
+                "Спасибо, что ты есть 🎉❤️"
             )
         else:
-            await update.message.reply_text(
-                "Поздравление уже прошло, но ты всё равно чудо 🌸",
-                reply_markup=reply_markup
-            )
+            msg = "Поздравление ждет своего часа 🌸"
+
+        await update.message.reply_text(msg, reply_markup=reply_markup)
 
     elif text == "Помощь ℹ️":
-        log_action(update.effective_user, "help")
-
-        help_text = (
-            "Вот что я умею:\n"
-            "🌸 Мотивирующая фраза — случайная фраза\n"
-            "🐶 Милая фотка — фото котиков и собак\n"
-            "🎉 Поздравление — особый день 24 января\n"
-            "ℹ️ Помощь — эта подсказка"
-        )
-        await update.message.reply_text(help_text, reply_markup=reply_markup)
-
-    else:
-        log_action(update.effective_user, "unknown")
-
+        log_action(user, "help")
         await update.message.reply_text(
-            "Нажимай на кнопки внизу 👇",
+            "🌸 Фраза — поддержка\n"
+            "🐶 Фото — милота\n"
+            "🎉 Поздравление — 24 января\n"
+            "ℹ️ Помощь — ты здесь",
             reply_markup=reply_markup
         )
+
+    else:
+        await update.message.reply_text(
+            "Нажимай кнопки внизу ⬇️",
+            reply_markup=reply_markup
+        )
+
 # -----------------------------
-# 7️⃣ Настройка приложения
+# 7️⃣ Запуск
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# -----------------------------
-# 8️⃣ Запуск
-# -----------------------------
 if __name__ == "__main__":
-    print("Бот запущен!")
+    print("Бот запущен")
     app.run_polling()
-
-
-
