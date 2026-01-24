@@ -191,6 +191,8 @@ def log_action(user, action):
 # 6️⃣ Обработчики сообщений
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    log_action(update.effective_user, "start")
+
     await update.message.reply_text(
         "Привет! Я твой маленький дружок с милыми фразами и фото 🐶🌸\n"
         "Нажимай на кнопки внизу, чтобы получать мотивацию, фотки и поздравление 🎉.",
@@ -203,54 +205,56 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(timezone.utc) + timedelta(hours=10)  # UTC+10
 
     if text == "Мотивирующая фраза 🌸":
-        phrase = random.choice(PHRASES)
-        await update.message.reply_text(phrase, reply_markup=reply_markup)
+    log_action(update.effective_user, "phrase")
+    phrase = random.choice(PHRASES)
+    await update.message.reply_text(phrase, reply_markup=reply_markup)
 
-    elif text == "Милая фотка 🐶":
+
+elif text == "Милая фотка 🐶":
+    log_action(update.effective_user, "photo")
+
+    photo_path = random.choice(photo_files)
+    while photo_path == last_photo and len(photo_files) > 1:
         photo_path = random.choice(photo_files)
-        # Проверяем, чтобы фото не повторялось подряд
-        while photo_path == last_photo and len(photo_files) > 1:
-            photo_path = random.choice(photo_files)
-        last_photo = photo_path
-        await update.message.reply_photo(photo=open(os.path.join(PHOTOS_DIR, photo_path), "rb"),
-                                         reply_markup=reply_markup)
+    last_photo = photo_path
 
-    elif text == "Поздравление 🎉":
-        birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
-        birthday_end = birthday_start + timedelta(days=1)
+    await update.message.reply_photo(
+        photo=open(os.path.join(PHOTOS_DIR, photo_path), "rb"),
+        reply_markup=reply_markup
+    )
 
-        if now < birthday_start:
-            await update.message.reply_text(
-                "Ещё рано 🎈 Подожди немного до особенного дня!",
-                reply_markup=reply_markup
-            )
-        elif birthday_start <= now < birthday_end:
-            await update.message.reply_text(
-                "Дорогая Леночка, наступил особенный день, который только для тебя. "
-                "Спасибо, что ты есть 🎉❤️",
-                reply_markup=reply_markup
-            )
-        else:
-            await update.message.reply_text(
-                "Поздравление уже прошло, но ты всё равно чудо 🌸",
-                reply_markup=reply_markup
-            )
+elif text == "Поздравление 🎉":
+    log_action(update.effective_user, "congratulation")
 
-    elif text == "Помощь ℹ️":
-        help_text = (
-            "Вот что я умею:\n"
-            "🌸 Мотивирующая фраза — присылаю случайную мотивацию\n"
-            "🐶 Милая фотка — присылаю фото собак\n"
-            "🎉 Поздравление — специальное сообщение для Лены (24 января)\n"
-            "ℹ️ Помощь — эта подсказка"
-        )
-        await update.message.reply_text(help_text, reply_markup=reply_markup)
+    birthday_start = datetime(2026, 1, 24, 0, 0, 0, tzinfo=timezone.utc)
+    birthday_end = birthday_start + timedelta(days=1)
 
-    else:
+    if now < birthday_start:
+        await update.message.reply_text("Ещё рано 🎈 Подожди немного до особенного дня!",
+                                        reply_markup=reply_markup)
+    elif birthday_start <= now < birthday_end:
         await update.message.reply_text(
-            "Нажимай на кнопки внизу, чтобы получить мотивацию, фото или поздравление 🎉",
+            "Дорогая Леночка, наступил особенный день...",
             reply_markup=reply_markup
         )
+    else:
+        await update.message.reply_text(
+            "Поздравление уже прошло, но ты всё равно чудо 🌸",
+            reply_markup=reply_markup
+        )
+
+elif text == "Помощь ℹ️":
+    log_action(update.effective_user, "help")
+
+    help_text = (
+        "Вот что я умею:\n"
+        "🌸 Мотивирующая фраза...\n"
+        "🐶 Милая фотка...\n"
+        "🎉 Поздравление...\n"
+        "ℹ️ Помощь..."
+    )
+    await update.message.reply_text(help_text, reply_markup=reply_markup)
+
 
 # -----------------------------
 # 7️⃣ Настройка приложения
@@ -265,4 +269,5 @@ app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message
 if __name__ == "__main__":
     print("Бот запущен!")
     app.run_polling()
+
 
