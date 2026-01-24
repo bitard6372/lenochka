@@ -135,7 +135,7 @@ PHRASES = [
 # -----------------------------
 keyboard = [
     ["Мотивирующая фраза 🌸", "Милая фотка 🐶"],
-    ["Поздравление 🎉", "Помощь ℹ️"]
+    ["Запоздалое Поздравление 🎉", "Помощь ℹ️"]
 ]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -279,6 +279,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен")
     app.run_polling()
+
 
 
 
