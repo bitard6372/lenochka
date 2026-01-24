@@ -235,16 +235,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-elif text == "Милая фотка 🐶":
-    log_action(user, "photo")
+    elif text == "Милая фотка 🐶":
+        log_action(user, "photo")
 
-    photo = get_next_photo()
-    await update.message.reply_photo(
-        photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
-        reply_markup=reply_markup
-    )
-
-
+        photo = get_next_photo()
+        await update.message.reply_photo(
+            photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
+            reply_markup=reply_markup
+        )
     elif text == "Поздравление 🎉":
         log_action(user, "birthday")
         await notify_admin(context, user, "birthday")
