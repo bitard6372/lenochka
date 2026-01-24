@@ -2,7 +2,6 @@ import os
 import random
 import sqlite3
 from datetime import datetime, timezone, timedelta
-
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -141,9 +140,15 @@ keyboard = [
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # -----------------------------
-# 5️⃣ База статистики
+# 5️⃣ Твой Telegram ID для уведомлений
+# -----------------------------
+ADMIN_CHAT_ID = 712908007
+
+# -----------------------------
+# 6️⃣ Функции статистики
 # -----------------------------
 def log_action(user, action):
+    """Сохраняем действия в SQLite"""
     conn = sqlite3.connect("stats.db")
     cur = conn.cursor()
 
@@ -191,11 +196,17 @@ def log_action(user, action):
     conn.commit()
     conn.close()
 
+async def notify_admin(context: ContextTypes.DEFAULT_TYPE, user, action):
+    """Отправляем уведомление тебе в Telegram"""
+    msg = f"Пользователь {user.first_name} (@{user.username}, id={user.id}) сделал действие: {action}"
+    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=msg)
+
 # -----------------------------
-# 6️⃣ Обработчики
+# 7️⃣ Обработчики
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_action(update.effective_user, "start")
+    await notify_admin(context, update.effective_user, "start")
     await update.message.reply_text(
         "Привет 💛\nНажимай на кнопки внизу ⬇️",
         reply_markup=reply_markup
@@ -208,6 +219,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "Мотивирующая фраза 🌸":
         log_action(user, "phrase")
+        await notify_admin(context, user, "phrase")
         await update.message.reply_text(
             random.choice(PHRASES),
             reply_markup=reply_markup
@@ -215,6 +227,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "Милая фотка 🐶":
         log_action(user, "photo")
+        await notify_admin(context, user, "photo")
         photo = random.choice(photo_files)
         await update.message.reply_photo(
             photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
@@ -223,6 +236,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "Поздравление 🎉":
         log_action(user, "birthday")
+        await notify_admin(context, user, "birthday")
         birthday_start = datetime(2026, 1, 24, 0, 0, tzinfo=timezone.utc)
         birthday_end = birthday_start + timedelta(days=1)
 
@@ -240,6 +254,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "Помощь ℹ️":
         log_action(user, "help")
+        await notify_admin(context, user, "help")
         await update.message.reply_text(
             "🌸 Фраза — поддержка\n"
             "🐶 Фото — милота\n"
@@ -255,7 +270,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # -----------------------------
-# 7️⃣ Запуск
+# 8️⃣ Запуск бота
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
