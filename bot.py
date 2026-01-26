@@ -1,7 +1,7 @@
 import os
 import random
 import sqlite3
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -12,18 +12,20 @@ from telegram.ext import (
 )
 
 # -----------------------------
-# 1️⃣ Токен
+# 🔐 TOKEN
 # -----------------------------
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
     raise ValueError("TOKEN не найден в Environment Variables")
 TOKEN = TOKEN.strip()
 
-# -----------------------------
-# 2️⃣ Фото
-# -----------------------------
+ADMIN_CHAT_ID = 712908007
 PHOTOS_DIR = "photos"
+DB_NAME = "stats.db"
 
+# -----------------------------
+# 🖼️ Фото
+# -----------------------------
 all_photos = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
 if not all_photos:
     raise ValueError("В папке photos нет jpg файлов")
@@ -32,11 +34,9 @@ photo_queue = []
 
 def get_next_photo():
     global photo_queue
-
     if not photo_queue:
         photo_queue = all_photos.copy()
         random.shuffle(photo_queue)
-
     return photo_queue.pop()
 
 # -----------------------------
@@ -140,26 +140,21 @@ PHRASES = [
     "Ты моя радость каждый день 😺🌼",
     "С тобой хочется улыбаться 😊🌟"
 ]
+
 # -----------------------------
-# 4️⃣ Клавиатура
+# ⌨️ Клавиатура
 # -----------------------------
 keyboard = [
     ["Мотивирующая фраза 🌸", "Милая фотка 🐶"],
-    ["Поздравление 🎉", "Помощь ℹ️"]
+    ["Помощь ℹ️"]
 ]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # -----------------------------
-# 5️⃣ Твой Telegram ID для уведомлений
-# -----------------------------
-ADMIN_CHAT_ID = 712908007
-
-# -----------------------------
-# 6️⃣ Функции статистики
+# 📊 Логирование
 # -----------------------------
 def log_action(user, action):
-    """Сохраняем действия в SQLite"""
-    conn = sqlite3.connect("stats.db")
+    conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
     cur.execute("""
@@ -190,13 +185,7 @@ def log_action(user, action):
             last_seen=excluded.last_seen,
             username=excluded.username,
             first_name=excluded.first_name
-    """, (
-        user.id,
-        user.username,
-        user.first_name,
-        now,
-        now
-    ))
+    """, (user.id, user.username, user.first_name, now, now))
 
     cur.execute("""
         INSERT INTO actions (user_id, action, timestamp)
@@ -206,17 +195,60 @@ def log_action(user, action):
     conn.commit()
     conn.close()
 
-async def notify_admin(context: ContextTypes.DEFAULT_TYPE, user, action):
-    """Отправляем уведомление тебе в Telegram"""
-    msg = f"Пользователь {user.first_name} (@{user.username}, id={user.id}) сделал действие: {action}"
-    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=msg)
+async def notify_admin(context, user, action):
+    await context.bot.send_message(
+        chat_id=ADMIN_CHAT_ID,
+        text=f"👤 {user.first_name} (@{user.username}, id={user.id}) → {action}"
+    )
+
+async def log_and_notify(context, user, action):
+    log_action(user, action)
+    await notify_admin(context, user, action)
 
 # -----------------------------
-# 7️⃣ Обработчики
+# 🧠 Действия
+# -----------------------------
+async def send_phrase(update, context):
+    await update.message.reply_text(
+        random.choice(PHRASES),
+        reply_markup=reply_markup
+    )
+
+async def send_photo(update, context):
+    photo = get_next_photo()
+    await update.message.reply_photo(
+        photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
+        reply_markup=reply_markup
+    )
+
+async def send_help(update, context):
+    await update.message.reply_text(
+        "🌸 Фраза — поддержка\n"
+        "🐶 Фото — милота\n"
+        "ℹ️ Помощь — ты здесь",
+        reply_markup=reply_markup
+    )
+
+# -----------------------------
+# 🗺️ Таблицы действий
+# -----------------------------
+ACTIONS = {
+    "Мотивирующая фраза 🌸": "phrase",
+    "Милая фотка 🐶": "photo",
+    "Помощь ℹ️": "help"
+}
+
+HANDLERS = {
+    "Мотивирующая фраза 🌸": send_phrase,
+    "Милая фотка 🐶": send_photo,
+    "Помощь ℹ️": send_help
+}
+
+# -----------------------------
+# 🚀 Handlers
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    log_action(update.effective_user, "start")
-    await notify_admin(context, update.effective_user, "start")
+    await log_and_notify(context, update.effective_user, "start")
     await update.message.reply_text(
         "Привет 💛\nНажимай на кнопки внизу ⬇️",
         reply_markup=reply_markup
@@ -225,62 +257,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.effective_user
-    now = datetime.now(timezone.utc)
 
-    if text == "Мотивирующая фраза 🌸":
-        log_action(user, "phrase")
-        await notify_admin(context, user, "phrase")
-        await update.message.reply_text(
-            random.choice(PHRASES),
-            reply_markup=reply_markup
-        )
+    if text in HANDLERS:
+        await log_and_notify(context, user, ACTIONS[text])
+        await HANDLERS[text](update, context)
+        return
 
-    elif text == "Милая фотка 🐶":
-        log_action(user, "photo")
-        await notify_admin(context, user, "photo")
-
-        photo = get_next_photo()
-        await update.message.reply_photo(
-            photo=open(os.path.join(PHOTOS_DIR, photo), "rb"),
-            reply_markup=reply_markup
-        )
-    elif text == "Поздравление 🎉":
-        log_action(user, "birthday")
-        await notify_admin(context, user, "birthday")
-        birthday_start = datetime(2026, 1, 24, 0, 0, tzinfo=timezone.utc)
-        birthday_end = birthday_start + timedelta(days=1)
-
-        if now < birthday_start:
-            msg = "Еще рано 🎈 Подожди немного"
-        elif birthday_start <= now < birthday_end:
-            msg = (
-                "Дорогая Леночка, я долго думал и долго не мог подобрать слова, которые хотел бы выразить. Я не хочу сейчас возращаться к больным темам и начинать философствовать об этом. Я очень рад, что именно в этот день 20 лет назад на свет появилась ты, этот день действительно важен для нас обоих. Я безмерно благодарен Господу за то, что тот дал мне возможность побыть рядом таким светлым, добрым, нежным и милим человеком как ты. Я поздравляю тебя с твоим днем рождения, я желаю тебе только счастья, спокойствия и уюта. Я желаю тебе только самого лучшего в этой жизни. Я безмерно люблю тебя. Я надеюсь, что этот вечер пройдет просто прекрасно, всё будет хорошо. С праздником. "
-                "Спасибо, что ты есть 🎉❤️"
-            )
-        else:
-            msg = "Поздравление ждет своего часа 🌸"
-
-        await update.message.reply_text(msg, reply_markup=reply_markup)
-
-    elif text == "Помощь ℹ️":
-        log_action(user, "help")
-        await notify_admin(context, user, "help")
-        await update.message.reply_text(
-            "🌸 Фраза — поддержка\n"
-            "🐶 Фото — милота\n"
-            "🎉 Поздравление — 24 января\n"
-            "ℹ️ Помощь — ты здесь",
-            reply_markup=reply_markup
-        )
-
-    else:
-        await update.message.reply_text(
-            "Нажимай кнопки внизу ⬇️",
-            reply_markup=reply_markup
-        )
+    await update.message.reply_text(
+        "Нажимай кнопки внизу ⬇️",
+        reply_markup=reply_markup
+    )
 
 # -----------------------------
-# 8️⃣ Запуск бота
+# ▶️ Запуск
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
@@ -289,13 +278,3 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен")
     app.run_polling()
-
-
-
-
-
-
-
-
-
-
