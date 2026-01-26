@@ -18,12 +18,13 @@ if not TOKEN:
 
 ADMIN_CHAT_ID = 712908007
 PHOTOS_DIR = "photos"
+PHRASES_FILE = "phrases.txt"
 DB_NAME = "stats.db"
 
-# ─── PHOTOS ────────────────────────────────────────
+# ─── LOAD PHOTOS ───────────────────────────────────
 all_photos = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
 if not all_photos:
-    raise ValueError("Нет jpg в photos")
+    raise ValueError("Нет jpg в папке photos")
 photo_queue = []
 
 def get_next_photo():
@@ -33,107 +34,15 @@ def get_next_photo():
         random.shuffle(photo_queue)
     return photo_queue.pop()
 
-# ─── PHRASES (оставил только начало, вставь все) ───
-PHRASES = [
-    "Леночка, ты невероятная, не забывай об этом 🌸",
-    "Дыши глубоко, всё наладится, я верю в тебя ❤️",
-    "Ты сильная, смелая и замечательная, Леночка 🌈",
-    "Не переживай слишком сильно, мир любит тебя 🌼",
-    "Каждый день — новая возможность, Леночка ✨",
-    "Ты заслуживаешь счастья и тепла, не забывай 🌷",
-    "Леночка, помни, что твои чувства важны и их можно отпустить 💛",
-    "Ты можешь всё, что задумала, просто поверь в себя 💫",
-    "Смейся, даже если сегодня трудно, Леночка 😺",
-    "Ты делаешь мир ярче, просто будь собой 🌟",
-    "Леночка, всё, что тебя тревожит, пройдёт 🕊️",
-    "Не спеши, дыши и делай маленькие шаги 🌸",
-    "Ты уже проделала огромную работу, Леночка 👏",
-    "Любой шторм заканчивается, и солнце обязательно выйдет ☀️",
-    "Леночка, знай: твоя доброта делает этот мир лучше 💖",
-    "Ты умеешь справляться с трудностями, даже если сейчас тяжело 🌷",
-    "Позволь себе отдохнуть и улыбнуться 😊",
-    "Леночка, ты заслуживаешь любви и заботы 🌹",
-    "Каждое твое чувство важно, не подавляй его 💛",
-    "Ты не одна, мир и я с тобой 🌈",
-    "Леночка, сегодня хороший день для маленькой радости 🍀",
-    "Ты талантлива, умна и прекрасна 🌟",
-    "Не бойся ошибок, они делают тебя сильнее 💫",
-    "Леночка, улыбнись, даже маленькая улыбка — это магия 😺",
-    "Ты способна на большее, чем думаешь 🌼",
-    "Всё будет хорошо, просто доверяй себе 🌷",
-    "Леночка, ты удивительная, не сомневайся 🌸",
-    "Пусть сегодня будет минутка покоя и тепла 💖",
-    "Ты умеешь справляться с любыми бурями, Леночка 🕊️",
-    "Помни, что маленькие победы — это тоже успех 🌟",
-    "Леночка, позволь себе почувствовать радость сегодня 😊",
-    "Ты достойна самых тёплых слов и объятий 💛",
-    "Даже в трудные моменты ты остаёшься прекрасной 🌷",
-    "Леночка, твоя энергия делает этот мир светлее ✨",
-    "Доверяй себе, ты всё сможешь 💫",
-    "Ты уже много прошла, гордись собой 🌹",
-    "Леночка, иногда отдых — это лучший способ быть сильной 🌼",
-    "Ты прекрасна такой, какая есть 😺",
-    "Пусть сегодня будет маленькое чудо для тебя 💖",
-    "Леночка, твоя улыбка — это солнце для других 🌸",
-    "Ты способна на невероятное, поверь 🌈",
-    "Даже если тяжело, каждый шаг — это прогресс 🌷",
-    "Леночка, будь мягкой к себе, ты заслуживаешь заботы 🕊️",
-    "Ты уникальна, помни об этом ✨",
-    "Леночка, каждый твой день — это маленькая победа 💛",
-    "Ты светишь даже в самые пасмурные дни 🌟",
-    "Леночка, ты справишься с этим, я знаю 😺",
-    "Пусть любовь к себе станет твоей силой 🌸",
-    "Ты прекрасна, даже когда сомневаешься 💖",
-    "Леночка, доверяй своим ощущениям и чувствам 🌷",
-    "Каждое утро — шанс начать с чистого листа 🌈",
-    "Ты самое тёплое, что есть в моём дне 🌞💛",
-    "С тобой даже обычные моменты становятся особенными 🌸✨",
-    "Мир с тобой ощущается добрее 🌈💖",
-    "Ты делаешь мою жизнь светлее ☀️🌷",
-    "Улыбка — это твоя суперсила 😺💫",
-    "Спасибо, что ты есть 💛🙏",
-    "С тобой хочется быть лучше 🌟💖",
-    "Ты мой уют 🕊️🌿",
-    "Каждый день с тобой это маленькое счастье 🍀😊",
-    "Ты вдохновляешь просто тем, что рядом 🌷💫",
-    "Мне нравится, что ты есть в этом мире 🌼💛",
-    "С тобой всё ощущается правильным 🌟🌸",
-    "Ты моя любовь ❤️🌈",
-    "Твоя нежность бесценна 💖🕊️",
-    "Ты умеешь делать день теплее ☀️🌹",
-    "Я благодарен судьбе за тебя 🙏💛",
-    "С тобой легко и спокойно 🌿🌸",
-    "Ты моя радость 😺✨",
-    "Даже котики завидуют твоей милоте 🐱💖",
-    "Ты украшаешь этот день 🌸🌞",
-    "Мне нравится думать о тебе 💛💫",
-    "Ты лучшее, что со мной случалось 🌷❤️",
-    "С тобой хочется делиться всем 🌈💖",
-    "Ты делаешь мир мягче 🌼🕊️",
-    "Ты моё счастье ☀️💛",
-    "Спасибо за твою доброту 🌸🙏",
-    "С тобой всегда тепло 🌞💖",
-    "Ты освящаешь этот день 🌟🌷",
-    "Ты делаешь меня счастливым 😺💫",
-    "Мне повезло, что ты рядом 🍀❤️",
-    "Ты как лучик света ☀️🌈",
-    "С тобой даже тишина приятная 🌿✨",
-    "Ты моя зайка 🐇💛",
-    "Я улыбаюсь, когда думаю о тебе 😺💖",
-    "Ты моё вдохновение 🌷💫",
-    "Улыбнись! 😊🌸",
-    "Мне хорошо, когда ты рядом 🕊️❤️",
-    "Ты мой маленький праздник 🎉💛",
-    "Ты лучше всех 🌟😺",
-    "Не описать словами мою любовь к тебе 💖🌈",
-    "Спасибо 🙏🌸",
-    "Ты моя нежность 🌷💛",
-    "Я знаю, что ты стараешься 💫💖",
-    "Ты моя радость каждый день 😺🌼",
-    "С тобой хочется улыбаться 😊🌟"
-]
+# ─── LOAD PHRASES ──────────────────────────────────
+if not os.path.exists(PHRASES_FILE):
+    raise ValueError(f"{PHRASES_FILE} не найден")
+with open(PHRASES_FILE, encoding="utf-8") as f:
+    PHRASES = [line.strip() for line in f if line.strip()]
+if not PHRASES:
+    raise ValueError("phrases.txt пустой")
 
-# ─── КЛАВИАТУРА (теперь 3 кнопки в двух строках) ────────────────────────────────
+# ─── KEYBOARD ──────────────────────────────────────
 keyboard = [
     ["Мотивирующая фраза 🌸", "Милая фотка 🐶"],
     ["Я желаю… 💭"]
@@ -141,19 +50,33 @@ keyboard = [
 reply_markup = ReplyKeyboardMarkup(
     keyboard,
     resize_keyboard=True,
-    one_time_keyboard=False,   # чтобы клавиатура не пряталась после нажатия
-    input_field_placeholder="Нажми кнопку ниже 💛"
+    one_time_keyboard=False
 )
 
-# ─── DATABASE ───────────────────────────────────────
+# ─── DATABASE ─────────────────────────────────────
 def db_conn():
     return sqlite3.connect(DB_NAME)
 
 def log_action(user, action):
     conn = db_conn()
     cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, first_seen TEXT, last_seen TEXT)")
-    cur.execute("CREATE TABLE IF NOT EXISTS actions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, action TEXT, timestamp TEXT)")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            first_name TEXT,
+            first_seen TEXT,
+            last_seen TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT,
+            timestamp TEXT
+        )
+    """)
     now = datetime.now().isoformat()
     cur.execute("""
         INSERT INTO users (user_id, username, first_name, first_seen, last_seen)
@@ -167,7 +90,14 @@ def log_action(user, action):
 def save_wish(user, wish_text):
     conn = db_conn()
     cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS wishes (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, wish TEXT, timestamp TEXT)")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS wishes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            wish TEXT,
+            timestamp TEXT
+        )
+    """)
     cur.execute("INSERT INTO wishes (user_id, wish, timestamp) VALUES (?, ?, ?)",
                 (user.id, wish_text, datetime.now().isoformat()))
     conn.commit()
@@ -181,14 +111,14 @@ def get_all_wishes():
     conn.close()
     return rows
 
-# ─── NOTIFY ─────────────────────────────────────────
+# ─── NOTIFY ADMIN ──────────────────────────────────
 async def notify_admin(context, user, action):
     await context.bot.send_message(
         ADMIN_CHAT_ID,
         f"👤 {user.first_name} (@{user.username or 'нет'}, id={user.id}) → {action}"
     )
 
-# ─── ACTIONS ────────────────────────────────────────
+# ─── ACTIONS ──────────────────────────────────────
 async def send_phrase(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(random.choice(PHRASES), reply_markup=reply_markup)
 
@@ -206,16 +136,17 @@ async def start_wish(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-# ─── HANDLERS MAP (только существующие 3 кнопки) ────────────────────────────────
+# ─── BUTTONS MAP ──────────────────────────────────
 BUTTONS = {
-    "Мотивирующая фраза 🌸": ("phrase", send_phrase),
-    "Милая фотка 🐶":        ("photo",  send_photo),
-    "Я желаю… 💭":           ("wish_start", start_wish),
-    
-# ─── BOT LOGIC ──────────────────────────────────────
+    "Мотивирующая фраза 🌸": send_phrase,
+    "Милая фотка 🐶": send_photo,
+    "Я желаю… 💭": start_wish
+}
+
+# ─── BOT LOGIC ───────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    await log_action(user, "start")
+    log_action(user, "start")
     await notify_admin(context, user, "start")
     await update.message.reply_text("Привет 💛\nНажимай на кнопки внизу ⬇️", reply_markup=reply_markup)
 
@@ -227,7 +158,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("waiting_for_wish"):
         context.user_data.pop("waiting_for_wish")
         save_wish(user, text)
-        await log_action(user, "wish_sent")
+        log_action(user, "wish_sent")
         await context.bot.send_message(
             ADMIN_CHAT_ID,
             f"💭 Новая хотелка от {user.first_name}:\n«{text}»"
@@ -237,9 +168,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Кнопки
     if text in BUTTONS:
-        action, handler = BUTTONS[text]
-        await log_action(user, action)
-        await notify_admin(context, user, action)
+        handler = BUTTONS[text]
+        log_action(user, text)
+        await notify_admin(context, user, text)
         await handler(update, context)
         return
 
@@ -259,7 +190,7 @@ async def wishes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(f"{i}. {date} — {wish}")
     await update.message.reply_text("\n".join(lines))
 
-# ─── RUN ────────────────────────────────────────────
+# ─── RUN ──────────────────────────────────────────
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("wishes", wishes_command))
@@ -268,5 +199,3 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 if __name__ == "__main__":
     print("Бот запущен")
     app.run_polling()
-
-
