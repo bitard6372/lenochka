@@ -1,7 +1,7 @@
 import os
 import random
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
@@ -12,7 +12,7 @@ from telegram.ext import (
 )
 
 # -----------------------------
-# 🔐 TOKEN
+# 🔐 CONFIG
 # -----------------------------
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
@@ -24,7 +24,7 @@ PHOTOS_DIR = "photos"
 DB_NAME = "stats.db"
 
 # -----------------------------
-# 🖼️ Фото
+# 🖼️ ФОТО
 # -----------------------------
 all_photos = [f for f in os.listdir(PHOTOS_DIR) if f.endswith(".jpg")]
 if not all_photos:
@@ -38,7 +38,6 @@ def get_next_photo():
         photo_queue = all_photos.copy()
         random.shuffle(photo_queue)
     return photo_queue.pop()
-
 # -----------------------------
 # 3️⃣ Список фраз
 # -----------------------------
@@ -142,19 +141,22 @@ PHRASES = [
 ]
 
 # -----------------------------
-# ⌨️ Клавиатура
+# ⌨️ КЛАВИАТУРА
 # -----------------------------
 keyboard = [
     ["Мотивирующая фраза 🌸", "Милая фотка 🐶"],
-    ["Помощь ℹ️"]
+    ["Я желаю… 💭", "Помощь ℹ️"]
 ]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # -----------------------------
-# 📊 Логирование
+# 📊 БАЗА ДАННЫХ
 # -----------------------------
+def get_db():
+    return sqlite3.connect(DB_NAME)
+
 def log_action(user, action):
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db()
     cur = conn.cursor()
 
     cur.execute("""
@@ -195,6 +197,44 @@ def log_action(user, action):
     conn.commit()
     conn.close()
 
+def save_wish(user, wish_text):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS wishes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            wish TEXT,
+            timestamp TEXT
+        )
+    """)
+
+    cur.execute("""
+        INSERT INTO wishes (user_id, wish, timestamp)
+        VALUES (?, ?, ?)
+    """, (user.id, wish_text, datetime.now().isoformat()))
+
+    conn.commit()
+    conn.close()
+
+def get_all_wishes():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT user_id, wish, timestamp
+        FROM wishes
+        ORDER BY timestamp ASC
+    """)
+
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+# -----------------------------
+# 📩 УВЕДОМЛЕНИЯ
+# -----------------------------
 async def notify_admin(context, user, action):
     await context.bot.send_message(
         chat_id=ADMIN_CHAT_ID,
@@ -206,7 +246,7 @@ async def log_and_notify(context, user, action):
     await notify_admin(context, user, action)
 
 # -----------------------------
-# 🧠 Действия
+# 🧠 ДЕЙСТВИЯ
 # -----------------------------
 async def send_phrase(update, context):
     await update.message.reply_text(
@@ -225,27 +265,38 @@ async def send_help(update, context):
     await update.message.reply_text(
         "🌸 Фраза — поддержка\n"
         "🐶 Фото — милота\n"
+        "💭 Желание — я запомню\n"
         "ℹ️ Помощь — ты здесь",
         reply_markup=reply_markup
     )
 
+async def start_wish(update, context):
+    context.user_data["waiting_for_wish"] = True
+    await update.message.reply_text(
+        "💭 Напиши, пожалуйста, чего ты хочешь.\n"
+        "Я обязательно это запомню 💛",
+        reply_markup=reply_markup
+    )
+
 # -----------------------------
-# 🗺️ Таблицы действий
+# 🗺️ ТАБЛИЦЫ
 # -----------------------------
 ACTIONS = {
     "Мотивирующая фраза 🌸": "phrase",
     "Милая фотка 🐶": "photo",
-    "Помощь ℹ️": "help"
+    "Помощь ℹ️": "help",
+    "Я желаю… 💭": "wish_start"
 }
 
 HANDLERS = {
     "Мотивирующая фраза 🌸": send_phrase,
     "Милая фотка 🐶": send_photo,
-    "Помощь ℹ️": send_help
+    "Помощь ℹ️": send_help,
+    "Я желаю… 💭": start_wish
 }
 
 # -----------------------------
-# 🚀 Handlers
+# 🚀 HANDLERS
 # -----------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await log_and_notify(context, update.effective_user, "start")
@@ -258,6 +309,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user = update.effective_user
 
+    # 💭 Обработка желания
+    if context.user_data.get("waiting_for_wish"):
+        context.user_data["waiting_for_wish"] = False
+        save_wish(user, text)
+        log_action(user, "wish_sent")
+
+        await context.bot.send_message(
+            chat_id=ADMIN_CHAT_ID,
+            text=(
+                "💭 Новая хотелка\n\n"
+                f"От: {user.first_name} (@{user.username}, id={user.id})\n"
+                f"Хочет:\n«{text}»"
+            )
+        )
+
+        await update.message.reply_text(
+            "Спасибо 💛 Я запомнил твоё желание ✨",
+            reply_markup=reply_markup
+        )
+        return
+
+    # 🔘 Кнопки
     if text in HANDLERS:
         await log_and_notify(context, user, ACTIONS[text])
         await HANDLERS[text](update, context)
@@ -269,10 +342,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # -----------------------------
-# ▶️ Запуск
+# 🔒 АДМИН-КОМАНДА
+# -----------------------------
+async def wishes_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_CHAT_ID:
+        await update.message.reply_text("⛔ Эта команда недоступна")
+        return
+
+    wishes = get_all_wishes()
+    if not wishes:
+        await update.message.reply_text("💭 Список желаний пуст")
+        return
+
+    lines = ["💭 Список желаний:\n"]
+    for i, (_, wish, timestamp) in enumerate(wishes, start=1):
+        date = timestamp.split("T")[0]
+        lines.append(f"{i}. ({date}) — {wish}")
+
+    await update.message.reply_text("\n".join(lines))
+
+# -----------------------------
+# ▶️ ЗАПУСК
 # -----------------------------
 app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("wishes", wishes_command))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 if __name__ == "__main__":
